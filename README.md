@@ -1,2 +1,2 @@
-Solve a imbalanced multiclass classification problem
+Solve an imbalanced multiclass classification problem
 
