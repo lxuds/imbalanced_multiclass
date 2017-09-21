@@ -35,7 +35,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import log_loss
+from sklearn.metrics import log_loss, f1_score
 from sklearn.externals import joblib
 
 ## hyperopt
@@ -44,7 +44,7 @@ from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 
 ## cutomized module
 from model_library_config import feat_folders, feat_names, param_spaces, int_feat
-#sys.path.append("../")
+sys.path.append("../../")
 #from param_config.py import config
 #from utils import proba2class
 from collections import Counter
@@ -104,7 +104,7 @@ def hyperopt_wrapper(param, feat_folder, feat_name):
     writer.writerow(var_to_log)
     log_handler.flush()
 
-    return {'loss': logloss_cv_mean, 'attachments': {'std': logloss_cv_std}, 'status': STATUS_OK}
+    return {'loss': -logloss_cv_mean, 'attachments': {'std': logloss_cv_std}, 'status': STATUS_OK}
     
 
 #### train CV and final model with a specified parameter setting
@@ -200,7 +200,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                     # "Model@clf_xgb_linear"
                     clf = xgb.train(param, dtrain_base, param['num_round'], watchlist)
                     pred_proba = clf.predict(dvalid_base)
-
+                    pred_label = np.argmax(pred_proba, axis=1)
                 elif param['task'] == "reg_skl_rf":
                     ## classification with sklearn random forest regressor
                     clf = RandomForestClassifier(n_estimators=param['n_estimators'],
@@ -338,7 +338,12 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                 #pred_raw = np.mean(preds_bagging[:,:(n+1)], axis=1)
                 #pred_class_bagging = proba2class(pred_raw)              
                 #logloss_valid = log_loss(Y_valid, pred_class_bagging)
-                logloss_valid = log_loss(Y_valid, pred_proba, labels=range(pred_proba.shape[1]))
+
+
+                #print pred_proba.shape
+                #logloss_valid = log_loss(Y_valid, pred_proba, labels=range(pred_proba.shape[1]))
+                logloss_valid = f1_score(Y_valid, pred_label, labels=range(pred_proba.shape[1]),average='weighted' )
+
                 if (n+1) != bagging_size:
                     print("              {:>3}   {:>3}   {:>3}   {:>6}   {} x {}".format(
                                 run, fold, n+1, np.round(logloss_valid,6), X_train.shape[0], X_train.shape[1]))
@@ -596,8 +601,8 @@ if __name__ == "__main__":
         print("Best params")
         for k,v in best_params.items():
             print "        %s: %s" % (k,v)
-        trial_loglosss = np.asarray(trials.losses(), dtype=float)
-        best_logloss_mean = min(trial_loglosss)
+        trial_loglosss = -np.asarray(trials.losses(), dtype=float)
+        best_logloss_mean = max(trial_loglosss)
         ind = np.where(trial_loglosss == best_logloss_mean)[0][0]
         best_logloss_std = trials.trial_attachments(trials.trials[ind])['std']
         print("Logloss stats")
