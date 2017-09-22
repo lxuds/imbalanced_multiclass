@@ -1,4 +1,8 @@
 *.pyc
-./data
+./data/
 ./output
 test1.py
+cate_label_map.txt
+data/
+err
+output/
