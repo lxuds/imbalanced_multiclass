@@ -55,7 +55,7 @@ token_pattern = r"(?u)\b\w\w+\b"
 tfidf__norm = "l2"
 tfidf__max_df = 0.9
 
-tfidf__min_df = 1
+tfidf__min_df = 2
 
 def getTFV(token_pattern = token_pattern,
            norm = tfidf__norm,
@@ -85,7 +85,7 @@ token_pattern = r"(?u)\b\w\w+\b"
 #token_pattern = r"\w+"
 #token_pattern = r"[\w']+"
 bow__max_df = 0.75
-bow__min_df = 1
+bow__min_df = 2
 def getBOW(token_pattern = token_pattern,
            max_df = bow__max_df,
            min_df = bow__min_df,
