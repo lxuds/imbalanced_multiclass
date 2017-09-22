@@ -102,64 +102,48 @@ if __name__ == "__main__":
     feat_folder = './output/feature'
     
     df_all = pd.read_csv('./data/Interview_Mapping.csv')
-    #num_all = df_all.shape[0],
-    #df_all["index"] = np.arange(num_all)
-    
     
     
     df_train = df_all.loc[df_all['Area.of.Law'] !='To be Tested']
     num_train = df_train.shape[0]
+
+    cate_group = df_train.groupby(df_train['Area.of.Law']).size().order(ascending=False)
+    # there are 41 different areas of law. There are 10 areas with judgments less than 4.
+    # The total number of judgments for these 10 areas is 19, 2% of the total sample. 
+    # We'll ignore these cases to get started
+    print cate_group
+    '''
+    # example
+    Area.of.Law
+    Civil Procedure                     136
+    Income Tax                           96
+    Tenancy Laws                         84
+    ....
+    Armed Forces                          1
+    Consumer Law                          1
+    '''
+    t = cate_group.values
+    print sum( t[cate_group<4]),  sum( t[cate_group<4])/num_train
+    cate_group = df_train.groupby(df_train['Area.of.Law'])
+
+
+    df_train = cate_group.filter(lambda x: len(x) > 3)
+    num_train = df_train.shape[0]
     df_train["id"] = np.arange(num_train)
-    
+
+    tmp = pd.factorize(df_train['Area.of.Law'])
+    df_train['cate_id'] = tmp[0]
+    dd = dict( [(i, x) for i,x in enumerate(tmp[1])])
+    print dd
+
+
     df_test = df_all.loc[df_all['Area.of.Law'] =='To be Tested']
-    num_test = df_test.shape[0] 
+    num_test = df_test.shape[0]
     df_test["id"] = np.arange(num_test) + num_train
 
     df_test.to_csv('./data/test.csv', index=False)
 
 
-    df_train.groupby(df_train['Area.of.Law']).value_counts()
-    
-    mlb = MultiLabelBinarizer()
-    Y = mlb.fit_transform([[x] for x in df_train['Area.of.Law'].values])
-    #df_train['Y_cate'] = 0 #np.zeros((df_train.shape[0])) 
-    xx = []
-    for j, t in enumerate(Y):
-       xx.append([i for i, x in enumerate(t) if x][0])
-       
-    df_train['cate_id'] = xx
-    #factorize
-    d ={}
-
-    '''
-    for i in range(num_train):
-        if df_train['Area.of.Law'].iloc[i] in d:
-            pass
-        if df_train['Area.of.Law'].iloc[i] not in d:
-            d[df_train['Area.of.Law'].iloc[i]] = df_train['cate_id'].iloc[i]
-    '''
-    for i in range(num_train):
-        if df_train['cate_id'].iloc[i] in d:
-            pass
-        if df_train['cate_id'].iloc[i] not in d:
-            d[df_train['cate_id'].iloc[i]] = df_train['Area.of.Law'].iloc[i]
-
-    print d
-    print d.values()
-    output = open('cate_label_map.txt', 'ab+')
-    cPickle.dump(d, output)
-    output.close()
-
-    # read data
-    output = open('cate_label_map.txt', 'rb')
-    obj_dict = cPickle.load(output) 
-    print obj_dict
-    pred_cate = [obj_dict[x] for x in df_train['cate_id']]
-
-    print [[pred_cate[i], df_train["Area.of.Law"].iloc[i]] for i in range(num_train)]
-    print 
-
-    '''
     n_runs = 5
     n_folds = 5
     skf = [0]*n_runs
@@ -272,15 +256,15 @@ if __name__ == "__main__":
             path = "%s/Run%d/Fold%d" % (feat_folder, run+1, fold+1)
             if not os.path.exists(path):
                 os.makedirs(path)
-            Y_train2 = Y[trainInd]
-            Y_valid = Y[validInd]
-    
+            #Y_train2 = Y[trainInd]
+            #Y_valid = Y[validInd]
+        '''
         print Y_train2.shape, Y_valid.shape
         with open("%s/train_label.pkl" % (path), "wb") as f:
             cPickle.dump(Y_train2, f, -1)
         with open("%s/valid_label.pkl" % (path), "wb") as f:
             cPickle.dump(Y_valid, f, -1)
-
+        '''
         Y_train2 = df_train['cate_id'].iloc[trainInd].values
         Y_valid = df_train['cate_id'].iloc[validInd].values
         print Y_train2
@@ -360,7 +344,4 @@ if __name__ == "__main__":
 
 
 
-
-
-'''
 
