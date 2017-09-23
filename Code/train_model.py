@@ -514,11 +514,12 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
     #no bagging used for retraining 
     ## write
         # read data
-    output = open('cate_label_map.txt', 'rb')
+    output = open('cate_label_map1.txt', 'rb')
     obj_dict = cPickle.load(output)
-
+    print obj_dict
 
     df_test = pd.read_csv('./data/test.csv')
+    
     pred_cate = [obj_dict[x] for x in pred_label]
     output = pd.DataFrame({"Judgements": df_test["Judgements"], "Area.of.Law": pred_cate})    
     output.to_csv(raw_pred_test_path, index=False)   
