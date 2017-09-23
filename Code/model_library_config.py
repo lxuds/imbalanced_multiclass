@@ -22,7 +22,7 @@ from hyperopt import hp
 ## Config ##
 ############
 
-debug = True
+debug = False 
 ## xgboost
 xgb_random_seed = 2015
 xgb_nthread = 2
@@ -122,6 +122,7 @@ param_space_reg_xgb_tree = {
     'seed': xgb_random_seed,
     "max_evals": hyperopt_param["xgb_max_evals"],
 }
+'''
 ## softmax with linear booster
 param_space_clf_xgb_linear = {
     'task': 'softmax',
@@ -140,23 +141,24 @@ param_space_clf_xgb_linear = {
 }
 '''
 ## softmax with linear booster
+#trial,f1sc,f1sstd,alpha,booster,eta,lambda,lambda_bias,max_evals,nthread,num_class,num_round,objective,seed,silent,task
+#193,0.606515,0.024836,0.15,gblinear,0.45,0.0,1.6,230,2,41,90,multi:softprob,2015,1,softmax
 param_space_clf_xgb_linear = {
     'task': 'softmax',
     'booster': 'gblinear',
     'objective': 'multi:softprob',
-    'eta' : 0.66,
-    'lambda' : 0.05,
-    'alpha' : 0.465,
-    'lambda_bias' : 2.1,
-    'num_round' : 350,
-    'num_class': 41,
+    'eta' : 0.45,
+    'lambda' : 0.0,
+    'alpha' : 0.15,
+    'lambda_bias' : 1.6,
+    'num_round' : 90,
+    'num_class': 31,
     'nthread': xgb_nthread,
     'silent' : 1,
     'seed': xgb_random_seed,
-    "max_evals": hyperopt_param["xgb_max_evals"],
+    "max_evals": 230,
 }
 
-'''
 
 ## pairwise ranking with linear booster
 param_space_rank_xgb_linear = {

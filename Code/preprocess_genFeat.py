@@ -126,24 +126,49 @@ if __name__ == "__main__":
     print sum( t[cate_group<4]),  sum( t[cate_group<4])/num_train
     cate_group = df_train.groupby(df_train['Area.of.Law'])
 
-
+    # filter the training datasets
     df_train = cate_group.filter(lambda x: len(x) > 3)
     num_train = df_train.shape[0]
     df_train["id"] = np.arange(num_train)
 
+    # converting category labels to numeric labels
     tmp = pd.factorize(df_train['Area.of.Law'])
     df_train['cate_id'] = tmp[0]
-    dd = dict( [(i, x) for i,x in enumerate(tmp[1])])
-    print dd
+    # generating map for category labels and numeric labels 
+    d = dict( [(i, x) for i,x in enumerate(tmp[1])])
+
+    print d
+    print d.values()
+    output = open('cate_label_map1.txt', 'ab+')
+    cPickle.dump(d, output)
+    output.close()
+
+    # read data
+    output = open('cate_label_map.txt', 'rb')
+    obj_dict = cPickle.load(output)
+    print obj_dict
+    pred_cate = [obj_dict[x] for x in df_train['cate_id']]
+
+    for i in range(num_train):
+        print i, pred_cate[i], df_train["Area.of.Law"].iloc[i]
 
 
+
+    '''
+    df_train.to_csv('./data/train.csv', index=False)
+
+
+    # define testing sets
     df_test = df_all.loc[df_all['Area.of.Law'] =='To be Tested']
     num_test = df_test.shape[0]
     df_test["id"] = np.arange(num_test) + num_train
 
     df_test.to_csv('./data/test.csv', index=False)
 
-
+    
+    ##############################
+    # generate cross-validiation folds
+    # 5 runs, and 5 folds for each run
     n_runs = 5
     n_folds = 5
     skf = [0]*n_runs
@@ -157,24 +182,16 @@ if __name__ == "__main__":
             print("Index for run: %s, fold: %s" % (run+1, fold+1))
             print("Train (num = %s)" % len(trainInd))
             print(trainInd[:10])
-            print("Valid (num = %s)" % len(validInd))
+            prina("Valid (num = %s)" % len(validInd))
             print(validInd[:10])
     
 
     with open("./data/stratifiedKFold.pkl", "wb") as f:
         cPickle.dump(skf, f, -1)
     
-    
-    #df_train.iloc[:,4:] = Y
-    
-    df_train.to_csv('./data/train.csv', index=False)
-    df_train['cate_id'].to_csv('./data/train_check.csv', index=False)
-    
-    with open("./data/stratifiedKFold.pkl", "rb") as f:
-        skf = cPickle.load(f)
-    
-    
-    
+    #########################
+    # generate features
+   
     print("For cross-validation...")
     for run in range(n_runs):
         print run
@@ -243,7 +260,6 @@ if __name__ == "__main__":
 
 
     print ("Done.") 
-
     
     
     # generate labels for each fold
@@ -256,30 +272,15 @@ if __name__ == "__main__":
             path = "%s/Run%d/Fold%d" % (feat_folder, run+1, fold+1)
             if not os.path.exists(path):
                 os.makedirs(path)
-            #Y_train2 = Y[trainInd]
-            #Y_valid = Y[validInd]
-        '''
-        print Y_train2.shape, Y_valid.shape
-        with open("%s/train_label.pkl" % (path), "wb") as f:
-            cPickle.dump(Y_train2, f, -1)
-        with open("%s/valid_label.pkl" % (path), "wb") as f:
-            cPickle.dump(Y_valid, f, -1)
-        '''
-        Y_train2 = df_train['cate_id'].iloc[trainInd].values
-        Y_valid = df_train['cate_id'].iloc[validInd].values
-        print Y_train2
-        #print trainInd
-        #print df_train['cate_id'].values
-        print Y_train2.shape, Y_valid.shape
-        with open("%s/train_label_scalar.pkl" % (path), "wb") as f:
-            cPickle.dump(Y_train2, f, -1)
-        with open("%s/valid_label_scalar.pkl" % (path), "wb") as f:
-            cPickle.dump(Y_valid, f, -1)
+            Y_train2 = df_train['cate_id'].iloc[trainInd].values
+            Y_valid = df_train['cate_id'].iloc[validInd].values
+            print Y_train2
+            print Y_train2.shape, Y_valid.shape
+            with open("%s/train_label_scalar.pkl" % (path), "wb") as f:
+                cPickle.dump(Y_train2, f, -1)
+            with open("%s/valid_label_scalar.pkl" % (path), "wb") as f:
+                cPickle.dump(Y_valid, f, -1)
     print("Done.")
-
-
-
-
 
 
     print ("generating features for testing sets.")
@@ -342,6 +343,6 @@ if __name__ == "__main__":
         cPickle.dump(cosine_sim_stats_feat_bow_by_area_test, f, -1)
 
 
-
+    '''
 
 
