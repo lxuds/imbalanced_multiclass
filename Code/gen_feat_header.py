@@ -1,9 +1,11 @@
 # -*- coding: <coding> -*-
+import os
 import re
 import pandas as pd
 #from textacy import preprocess_text
 from sklearn.preprocessing import MultiLabelBinarizer
-
+#from sklearn.cross_validation import StratifiedKFold
+import cPickle
 df = pd.read_csv('./data/Interview_Mapping.csv')
 df_test = df.loc[df['Area.of.Law'] =='To be Tested']
 df_train = df.loc[df['Area.of.Law'] !='To be Tested']
@@ -283,9 +285,106 @@ loc_dummies_train = loc_dummies[ind_train]
 print loc_dummies_test.shape
 print loc_dummies_train.shape
 
+abb_names_dummies_test = abb_names_dummies[ind_test]
+abb_names_dummies_train = abb_names_dummies[ind_train]
+
+source_dummies_test = source_dummies[ind_test]
+source_dummies_train = source_dummies[ind_train]
 
 
 #print df_train['Area.of.Law'].groupby(df_train['court_loc']).describe()
 
 #print df_train.groupby(['court_loc', 'Area.of.Law']).size()
 
+#########################
+# Save features for training and testing sets
+
+print ("generating features for training and testing sets.")
+feat_folder = './output/feature'
+path = "%s/All" % (feat_folder)
+
+with open("%s/train_court_loc.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(loc_dummies_train, f, -1)
+with open("%s/test_court_loc.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(loc_dummies_test, f, -1)
+
+with open("%s/train_abb_names.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(abb_names_dummies_train, f, -1)
+with open("%s/test_abb_names.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(abb_names_dummies_test, f, -1)
+
+with open("%s/train_source.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(source_dummies_train, f, -1)
+with open("%s/test_source.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(source_dummies_test, f, -1)
+
+
+#########################
+# generate features for cross-validation sets
+
+print("generating features for  cross-validation...")
+
+
+'''
+##############################
+# generate cross-validiation folds
+# 5 runs, and 5 folds for each run
+n_runs = 5
+n_folds = 5
+skf = [0]*n_runs
+
+for run in range(n_runs):
+    random_seed = 2015 + 1000 * (run+1)
+    skf[run] = StratifiedKFold(df_train['cate_id'], n_folds=n_folds,shuffle=True, random_state=random_seed)
+    #skf_result[run] = skf.split(Y, df_train['cate_id'])
+    for fold, (trainInd, validInd) in enumerate(skf[run]):
+        print("================================")
+        print("Index for run: %s, fold: %s" % (run+1, fold+1))
+        print("Train (num = %s)" % len(trainInd))
+        print(trainInd[:10])
+        prina("Valid (num = %s)" % len(validInd))
+        print(validInd[:10])
+
+
+with open("./data/stratifiedKFold.pkl", "wb") as f:
+    cPickle.dump(skf, f, -1)
+'''
+with open("./data/stratifiedKFold.pkl", "rb") as f:
+    skf = cPickle.load(f)
+
+n_runs = 5
+for run in range(n_runs):
+    print run
+    for fold, (trainInd, validInd) in enumerate(skf[run]):
+        print("Run: %d, Fold: %d" % (run+1, fold+1))
+        path = "%s/Run%d/Fold%d" % (feat_folder, run+1, fold+1)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        cv_loc_train = loc_dummies_train[trainInd]
+        cv_loc_valid = loc_dummies_train[validInd]
+        cv_abb_names_train = abb_names_dummies_train[trainInd]
+        cv_abb_names_valid = abb_names_dummies_train[validInd]
+        cv_source_train = source_dummies_train[trainInd]
+        cv_source_valid = source_dummies_train[validInd]
+
+        print cv_loc_train.shape, cv_loc_valid.shape
+        print cv_abb_names_train.shape, cv_abb_names_valid.shape
+        print cv_source_train.shape, cv_source_valid.shape
+
+
+        with open("%s/train_court_loc.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_loc_train, f, -1)
+        with open("%s/valid_court_loc.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_loc_valid, f, -1)
+
+        with open("%s/train_abb_names.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_abb_names_train, f, -1)
+        with open("%s/valid_abb_names.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_abb_names_valid, f, -1)
+        
+        with open("%s/train_source.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_source_train, f, -1)
+        with open("%s/test_source.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_source_valid, f, -1)
+
+print 'All Done'
