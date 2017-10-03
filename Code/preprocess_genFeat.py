@@ -62,7 +62,6 @@ stats_func = [ np.mean, np.std ]
 stats_feat_num = len(quantiles_range) + len(stats_func)
 
 ## generate distance stats feat
-n_classes = 41
 def generate_dist_stats_feat(metric, X_train, ids_train, X_test, ids_test, indices_dict, qids_test=None):
     if metric == "cosine":
         stats_feat = 0 * np.ones((len(ids_test), stats_feat_num*n_classes), dtype=float)
@@ -107,7 +106,7 @@ if __name__ == "__main__":
     df_train = df_all.loc[df_all['Area.of.Law'] !='To be Tested']
     num_train = df_train.shape[0]
 
-    cate_group = df_train.groupby(df_train['Area.of.Law']).size().order(ascending=False)
+    cate_group = df_train.groupby(df_train['Area.of.Law']).size().sort_values(ascending=False)
     # there are 41 different areas of law. There are 10 areas with judgments less than 4.
     # The total number of judgments for these 10 areas is 19, 2% of the total sample. 
     # We'll ignore these cases to get started
@@ -123,14 +122,16 @@ if __name__ == "__main__":
     Consumer Law                          1
     '''
     t = cate_group.values
-    print sum( t[cate_group<4]),  sum( t[cate_group<4])/num_train
+    print t
+    print 'minor:',sum(t[cate_group.values<4]), 'ratio', sum(t[cate_group.values<4])/float(num_train)
     cate_group = df_train.groupby(df_train['Area.of.Law'])
-
+    n_classes = len(t[t>3])
     # filter the training datasets
     df_train = cate_group.filter(lambda x: len(x) > 3)
     num_train = df_train.shape[0]
     df_train["id"] = np.arange(num_train)
-
+       
+    
     # converting category labels to numeric labels
     tmp = pd.factorize(df_train['Area.of.Law'])
     df_train['cate_id'] = tmp[0]
@@ -143,15 +144,16 @@ if __name__ == "__main__":
     cPickle.dump(d, output)
     output.close()
 
+
+
     # read data
-    output = open('cate_label_map.txt', 'rb')
-    obj_dict = cPickle.load(output)
-    print obj_dict
-    pred_cate = [obj_dict[x] for x in df_train['cate_id']]
+    #output = open('cate_label_map.txt', 'rb')
+    #obj_dict = cPickle.load(output)
+    #print obj_dict
+    #pred_cate = [obj_dict[x] for x in df_train['cate_id']]
 
-    for i in range(num_train):
-        print i, pred_cate[i], df_train["Area.of.Law"].iloc[i]
-
+    #for i in range(num_train):
+    #    print i, pred_cate[i], df_train["Area.of.Law"].iloc[i]
 
 
     
@@ -162,7 +164,7 @@ if __name__ == "__main__":
     df_test = df_all.loc[df_all['Area.of.Law'] =='To be Tested']
     num_test = df_test.shape[0]
     df_test["id"] = np.arange(num_test) + num_train
-
+    df_test['cate_id'] = [0]*num_test
     df_test.to_csv('./data/test.csv', index=False)
 
     
@@ -344,5 +346,5 @@ if __name__ == "__main__":
 
 
     
-
+    
 
