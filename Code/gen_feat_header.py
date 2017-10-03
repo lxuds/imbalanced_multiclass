@@ -5,10 +5,17 @@ import pandas as pd
 from sklearn.preprocessing import MultiLabelBinarizer
 
 df = pd.read_csv('./data/Interview_Mapping.csv')
+df_test = df.loc[df['Area.of.Law'] =='To be Tested']
+df_train = df.loc[df['Area.of.Law'] !='To be Tested']
 
-#df = df.loc[df['Area.of.Law'] =='To be Tested']
+ind_test = df.index[df['Area.of.Law'] =='To be Tested']
+ind_train = df.index[df['Area.of.Law'] !='To be Tested']
+print ind_test
 
 
+
+
+#############################
 # extract category indicator
 names =[]
 for i in range(df.shape[0]):
@@ -19,7 +26,6 @@ for i in range(df.shape[0]):
     pattern = r'^([a-z][a-z-\. ]+)(?:[0-9]|Case|Appeal|\()'
     obj = re.findall(pattern, text2, re.I|re.MULTILINE)
     names.append(obj)
-
 
 clean_name = []
 for i, x in enumerate(names):
@@ -71,6 +77,8 @@ df['source'] = clean_name
 b = df['source'].value_counts()
 b.to_csv('a.csv', index=True)
 
+
+# combine categories with case < 2
 threshold = 2
 value_counts = df['source'].value_counts() # Specific column 
 #print value_counts
@@ -78,9 +86,26 @@ value_counts = df['source'].value_counts() # Specific column
 to_remove = value_counts[value_counts < threshold].index
 df['source'].replace(to_remove, 'OTHER', inplace=True)
 df['source'].replace('', 'MISSING', inplace=True)
+
 b = df['source'].value_counts()
 #print b
 
+#source_dummies = pd.get_dummies(df['source'])
+
+
+mlb = MultiLabelBinarizer()
+source_dummies = mlb.fit_transform([[x] for x in df['source']])
+#print mlb.classes_
+# 34 features
+#print len(a[0])
+#print a[0]
+print source_dummies.shape
+
+source_dummies_test = source_dummies[ind_test]
+source_dummies_train = source_dummies[ind_train]
+
+print source_dummies_test.shape
+print source_dummies_train.shape
 
 #print df.groupby(['Area.of.Law','source']).size() #.order(ascending=False)
 #df = df.loc[df['Area.of.Law'] !='To be Tested']
@@ -103,18 +128,22 @@ df_train = df.loc[df['Area.of.Law'] !='To be Tested']
 Y_train = df_train['Area.of.Law']
 
 
-d = {}
 #df_train = df.loc[df['Area.of.Law'] !='To be Tested']
 '''
-
 # extract names
+from collections import defaultdict
+dd = defaultdict(list)
 names = []
 for i in range(df.shape[0]):
     f = open('./data/FixedJudgements/'+ df.iloc[i,0] + '.txt')
     raw = f.read()
     text1 =  raw.split('Judgment')[0]
-    pattern = r'(?:BLE|CHIEF) (?:JUSTICE M(?:R|S|RS).|M(?:R|S|RS). JUSTICE) ([a-z\. ]+)(?:,|&|\n|A.F.O.D.)'
-
+    #text1 =text1.replace(',', '.')
+    pattern = r'(?:JUSTICE M(?:R|S|RS).|M(?:R|S|RS). JUSTICE) ([a-z\. ]+)(?:,|&|\n|A.F.O.D.)'    
+    #pattern = r'(?:BLE|CHIEF) (?:JUSTICE M(?:R|S|RS).|M(?:R|S|RS). JUSTICE) ([a-z\. ]+)(?:,|&|\n|A.F.O.D.)'
+    #pattern1 = r'ABLE M(?:R|S|RS). JUSTICE ([a-z\., ]+)(?:,|&|\n|A.F.O.D.)' 
+    #pattern2 = r'HONOURABLE CHIEF JUSTICE M(?:R|S|RS). ([a-z\., ]+)(?:,|&|\n|A.F.O.D.)'
+    #obj = re.findall('|'.join([pattern1,pattern2]), text1, re.I)
     obj = re.findall(pattern, text1, re.I)
     obj = [x.rstrip() for x in obj]
 
@@ -136,23 +165,31 @@ for i in range(df.shape[0]):
                 if last_name not in last_names:
                     last_names.append(last_name)
                 confirmed_last_name_list.append(last_name)
-        
+               
+
     #print i, df.iloc[i,0], obj, confirmed_last_name_list 
-print last_names
-print len(set(last_names))
+#print last_names
+#print len(set(last_names))
 
 # extract full name, and abbreviate first and mid names
 abb_names = []
 abb_names_list = []
 for i in range(df.shape[0]):
+#for i in [741, 742]:
     obj = names[i]
     abb_name_list_each = []
     for name in obj:
+        name = ' '.join(name.split()).upper()
         if '.' in name:
-            pattern =r'((\w\.){1,}) *([A-Z ]{2,})'
+            pattern =r'(\w{1,}) (\w\.){1,} *([A-Z ]{2,})'
             obj_new = re.findall(pattern, name, re.I)
             if obj_new:
-                new_name = obj_new[0][0] + ' ' + obj_new[0][2]
+                new_name = obj_new[0][0][0] + '.' + obj_new[0][1] + ' ' + obj_new[0][-1]
+            else:
+                pattern =r'((\w\. *){1,}) *([A-Z ]{2,})'
+                obj_new = re.findall(pattern, name, re.I)
+                if obj_new:
+                    new_name = ''.join(obj_new[0][0].split()) + ' ' + obj_new[0][2]
         else:
             if name in last_names:
                 new_name = name
@@ -166,21 +203,43 @@ for i in range(df.shape[0]):
         abb_name_list_each.append(new_name)
         if new_name not in abb_names:
             abb_names.append(new_name)
+        if name not in dd[new_name]:
+            dd[new_name].append(name)
+    #print  i, df.iloc[i,0], obj, abb_name_list_each
     abb_names_list.append(abb_name_list_each)
-    print i, df.iloc[i,0], names[i], abb_name_list_each, abb_names_list[i]
-print len(abb_names)
-print len(abb_names_list)
+ 
+
+a= sorted(dd.iteritems(),key=lambda (k,v):v[0])
+
+#for i, x in enumerate(a):
+#  print i, x
+
+
+#print i, df.iloc[i,0], names[i], abb_name_list_each, abb_names_list[i]
+#print len(abb_names)
+#print len(abb_names_list)
 
 
 df['abb_names'] = abb_names_list
 
 mlb = MultiLabelBinarizer()
-a = mlb.fit_transform(abb_names_list)
+abb_names_dummies = mlb.fit_transform(abb_names_list)
+
+abb_names_dummies_test = abb_names_dummies[ind_test]
+abb_names_dummies_train = abb_names_dummies[ind_train]
 #print mlb.classes_
-#print a[0]
-#from itertools import compress
-#print list(compress(mlb.classes_, a[0]))
-#print abb_names_list[0]
+#print len(mlb.classes_)
+#print abb_names_dummies[0]
+
+print abb_names_dummies_test.shape
+print abb_names_dummies_train.shape
+
+
+'''
+from itertools import compress
+print list(compress(mlb.classes_, abb_names_dummies[0]))
+print abb_names_list[0]
+'''
 
 
 # extract court location
@@ -190,13 +249,13 @@ court_loc_all = []
 for i in range(df.shape[0]):
     f = open('./data/FixedJudgements/'+ df.iloc[i,0] + '.txt')
     raw = f.read()
-    text1 =  raw.split('Judgment')[0]
-    pattern = r'^(\w+) Court .*? (\w+)$'
+    text1 =  raw.split('Judges')[0]
+    pattern = r'^(\w+) Court (?:.*? at|of) (\w+)'
     obj = re.search(pattern, text1, re.I|re.MULTILINE)
     if obj:
        court_loc = obj.group(2)
        court = obj.group(1)
-       print i, df.iloc[i,0], court, court_loc
+       #print i, df.iloc[i,0], court, court_loc
        if court_loc not in court_loc_all:
            court_loc_all.append(court_loc)
        #if court not in court_all:
@@ -204,13 +263,29 @@ for i in range(df.shape[0]):
     else:
         court_loc = ''
     court_loc_list.append(court_loc)
+    #print i, df.iloc[i,0], obj,
 #print court_loc_all
 #print court_loc_list
 df['court_loc'] = court_loc_list
+print df.loc[df['court_loc'] =='' ]
 
-df_train = df.loc[df['Area.of.Law'] !='To be Tested']
+print df['court_loc'].value_counts()
+mlb = MultiLabelBinarizer()
+loc_dummies = mlb.fit_transform([[x] for x in court_loc_list])
+print mlb.classes_
+print loc_dummies[0]
+loc_dummies_test = loc_dummies[ind_test]
+loc_dummies_train = loc_dummies[ind_train]
+#print mlb.classes_
+#print len(mlb.classes_)
+#print loc_dummies[0]
+
+print loc_dummies_test.shape
+print loc_dummies_train.shape
+
+
+
 #print df_train['Area.of.Law'].groupby(df_train['court_loc']).describe()
 
 #print df_train.groupby(['court_loc', 'Area.of.Law']).size()
-
 
