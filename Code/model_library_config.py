@@ -22,7 +22,7 @@ from hyperopt import hp
 ## Config ##
 ############
 
-debug = False 
+debug = True
 ## xgboost
 xgb_random_seed = 2015
 xgb_nthread = 2

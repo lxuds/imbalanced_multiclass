@@ -1,16 +1,35 @@
 # -*- coding: <coding> -*-
+import os
 import re
 import pandas as pd
 #from textacy import preprocess_text
 from sklearn.preprocessing import MultiLabelBinarizer
+#from sklearn.cross_validation import StratifiedKFold
+import cPickle
+import numpy as np
 
-df = pd.read_csv('./data/Interview_Mapping.csv')
-df_test = df.loc[df['Area.of.Law'] =='To be Tested']
-df_train = df.loc[df['Area.of.Law'] !='To be Tested']
 
-ind_test = df.index[df['Area.of.Law'] =='To be Tested']
-ind_train = df.index[df['Area.of.Law'] !='To be Tested']
-print ind_test
+
+
+################
+# Loading data #
+################
+df_train = pd.read_csv('./data/train.csv')
+df_test = pd.read_csv('./data/test.csv')
+num_train = df_train.shape[0]
+num_test = df_test.shape[0]
+df = df_train.append(df_test, ignore_index=True)
+
+
+
+#df = pd.read_csv('./data/Interview_Mapping.csv')
+#df_test = df.loc[df['Area.of.Law'] =='To be Tested']
+#df_train = df.loc[df['Area.of.Law'] !='To be Tested']
+#indtrain = df.index[df['Area.of.Law'] =='To be Tested']
+#indtest= df.index[df['Area.of.Law'] !='To be Tested']
+#print num_train:
+
+
 
 
 
@@ -99,10 +118,10 @@ source_dummies = mlb.fit_transform([[x] for x in df['source']])
 # 34 features
 #print len(a[0])
 #print a[0]
-print source_dummies.shape
+print 'header indicator categories:', source_dummies.shape
 
-source_dummies_test = source_dummies[ind_test]
-source_dummies_train = source_dummies[ind_train]
+source_dummies_test = source_dummies[num_train:]
+source_dummies_train = source_dummies[:num_train]
 
 print source_dummies_test.shape
 print source_dummies_train.shape
@@ -225,8 +244,8 @@ df['abb_names'] = abb_names_list
 mlb = MultiLabelBinarizer()
 abb_names_dummies = mlb.fit_transform(abb_names_list)
 
-abb_names_dummies_test = abb_names_dummies[ind_test]
-abb_names_dummies_train = abb_names_dummies[ind_train]
+abb_names_dummies_test = abb_names_dummies[num_train:]
+abb_names_dummies_train = abb_names_dummies[:num_train]
 #print mlb.classes_
 #print len(mlb.classes_)
 #print abb_names_dummies[0]
@@ -274,8 +293,8 @@ mlb = MultiLabelBinarizer()
 loc_dummies = mlb.fit_transform([[x] for x in court_loc_list])
 print mlb.classes_
 print loc_dummies[0]
-loc_dummies_test = loc_dummies[ind_test]
-loc_dummies_train = loc_dummies[ind_train]
+loc_dummies_test = loc_dummies[num_train:]
+loc_dummies_train = loc_dummies[:num_train]
 #print mlb.classes_
 #print len(mlb.classes_)
 #print loc_dummies[0]
@@ -284,8 +303,97 @@ print loc_dummies_test.shape
 print loc_dummies_train.shape
 
 
-
 #print df_train['Area.of.Law'].groupby(df_train['court_loc']).describe()
 
 #print df_train.groupby(['court_loc', 'Area.of.Law']).size()
 
+#########################
+# Save features for training and testing sets
+
+print ("generating features for training and testing sets.")
+feat_folder = './output/feature'
+path = "%s/All" % (feat_folder)
+
+with open("%s/train_court_loc.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(loc_dummies_train, f, -1)
+with open("%s/test_court_loc.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(loc_dummies_test, f, -1)
+
+with open("%s/train_abb_names.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(abb_names_dummies_train, f, -1)
+with open("%s/test_abb_names.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(abb_names_dummies_test, f, -1)
+
+with open("%s/train_source.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(source_dummies_train, f, -1)
+with open("%s/test_source.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(source_dummies_test, f, -1)
+
+
+
+X_train = np.hstack([loc_dummies_train, abb_names_dummies_train, source_dummies_train])
+X_test = np.hstack([loc_dummies_test, abb_names_dummies_test, source_dummies_test])
+with open("%s/train_header.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(X_train, f, -1)
+with open("%s/test_header.feat.pkl" % (path), "wb") as f:
+    cPickle.dump(X_test, f, -1)
+
+
+
+
+
+#########################
+# generate features for cross-validation sets
+
+print("generating features for  cross-validation...")
+
+
+with open("./data/stratifiedKFold.pkl", "rb") as f:
+    skf = cPickle.load(f)
+
+n_runs = 5
+for run in range(n_runs):
+    print run
+    for fold, (trainInd, validInd) in enumerate(skf[run]):
+        print("Run: %d, Fold: %d" % (run+1, fold+1))
+        path = "%s/Run%d/Fold%d" % (feat_folder, run+1, fold+1)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        cv_loc_train = loc_dummies_train[trainInd]
+        cv_loc_valid = loc_dummies_train[validInd]
+        cv_abb_names_train = abb_names_dummies_train[trainInd]
+        cv_abb_names_valid = abb_names_dummies_train[validInd]
+        cv_source_train = source_dummies_train[trainInd]
+        cv_source_valid = source_dummies_train[validInd]
+
+        cv_train = X_train[trainInd]
+        cv_valid = X_train[validInd]
+
+        print cv_loc_train.shape, cv_loc_valid.shape
+        print cv_abb_names_train.shape, cv_abb_names_valid.shape
+        print cv_source_train.shape, cv_source_valid.shape
+        print cv_train.shape, cv_valid.shape
+
+        with open("%s/train_court_loc.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_loc_train, f, -1)
+        with open("%s/valid_court_loc.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_loc_valid, f, -1)
+
+        with open("%s/train_abb_names.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_abb_names_train, f, -1)
+        with open("%s/valid_abb_names.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_abb_names_valid, f, -1)
+        
+        with open("%s/train_source.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_source_train, f, -1)
+        with open("%s/valid_source.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_source_valid, f, -1)
+
+        with open("%s/train_header.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_train, f, -1)
+        with open("%s/valid_header.feat.pkl" % (path), "wb") as f:
+            cPickle.dump(cv_valid, f, -1)
+
+
+
+print 'All Done'
