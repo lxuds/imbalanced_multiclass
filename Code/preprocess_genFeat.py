@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
 
 
-    '''
+    
     df_train.to_csv('./data/train.csv', index=False)
 
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
             print("Index for run: %s, fold: %s" % (run+1, fold+1))
             print("Train (num = %s)" % len(trainInd))
             print(trainInd[:10])
-            prina("Valid (num = %s)" % len(validInd))
+            print("Valid (num = %s)" % len(validInd))
             print(validInd[:10])
     
 
@@ -343,6 +343,6 @@ if __name__ == "__main__":
         cPickle.dump(cosine_sim_stats_feat_bow_by_area_test, f, -1)
 
 
-    '''
+    
 
 
