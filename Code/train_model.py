@@ -44,9 +44,6 @@ from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 
 ## cutomized module
 from model_library_config import feat_folders, feat_names, param_spaces, int_feat
-sys.path.append("../../")
-#from param_config.py import config
-#from utils import proba2class
 from collections import Counter
 
 
@@ -88,29 +85,29 @@ def hyperopt_wrapper(param, feat_folder, feat_name):
     for k,v in sorted(param.items()):
         print("              %s: %s" % (k,v))
     print("        Result")
-    print("                    Run      Fold      Bag      Logloss     Shape")
+    print("                    Run      Fold      Bag      f1_score     Shape")
 
     ## evaluate performance
-    logloss_cv_mean, logloss_cv_std = hyperopt_obj(param, feat_folder, feat_name, trial_counter)
+    f1score_cv_mean, f1score_cv_std = hyperopt_obj(param, feat_folder, feat_name, trial_counter)
 
     ## log
     var_to_log = [
         "%d" % trial_counter,
-        "%.6f" % logloss_cv_mean, 
-        "%.6f" % logloss_cv_std
+        "%.6f" % f1score_cv_mean, 
+        "%.6f" % f1score_cv_std
     ]
     for k,v in sorted(param.items()):
         var_to_log.append("%s" % v)
     writer.writerow(var_to_log)
     log_handler.flush()
 
-    return {'loss': -logloss_cv_mean, 'attachments': {'std': logloss_cv_std}, 'status': STATUS_OK}
+    return {'loss': -f1score_cv_mean, 'attachments': {'std': f1score_cv_std}, 'status': STATUS_OK}
     
 
 #### train CV and final model with a specified parameter setting
 def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
 
-    logloss_cv = np.zeros((n_runs, n_folds), dtype=float)
+    f1score_cv = np.zeros((n_runs, n_folds), dtype=float)
     
     for run in range(1,n_runs+1):
         for fold in range(1,n_folds+1):
@@ -149,6 +146,8 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
             with open("%s/train_tfidf_svd85_cosine_sim.feat.pkl"% (path), "rb") as f:
                   X_train_tfidf_svd85_cosine_sim = cPickle.load(f)
 
+
+           
              
             #print "%s/valid_tfidf_cosine_sim.feat.pkl" % (path)
             with open("%s/valid_tfidf_cosine_sim.feat.pkl" % (path), "rb") as f:
@@ -157,9 +156,10 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                   X_valid_bow = cPickle.load(f)
             with open("%s/valid_header.feat.pkl" % (path), "rb") as f:
                   X_valid_header = cPickle.load(f)
-
             with open("%s/valid_tfidf_svd85_cosine_sim.feat.pkl"% (path), "rb") as f:
                   X_valid_tfidf_svd85_cosine_sim = cPickle.load(f)
+
+
 
 
 
@@ -169,12 +169,13 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                   labels_valid = cPickle.load(f)
             #print X_valid_tfidf.shape
             #print X_valid_bow.shape
+            #X_train = np.hstack([X_train_tfidf, X_train_bow])
+            #X_valid = np.hstack([X_valid_tfidf, X_valid_bow])
+            #X_train = np.hstack([X_train_tfidf, X_train_bow])#, X_train_tfidf_svd85_cosine_sim])#, X_train_header])
+            #X_valid = np.hstack([X_valid_tfidf, X_valid_bow])#, X_valid_tfidf_svd85_cosine_sim])#, X_valid_header])
+            X_train = X_train_header
+            X_valid = X_valid_header
 
-            
-
- 
-            X_train = np.hstack([X_train_tfidf, X_train_bow])#, X_train_tfidf_svd85_cosine_sim])#, X_train_header])
-            X_valid = np.hstack([X_valid_tfidf, X_valid_bow])#, X_valid_tfidf_svd85_cosine_sim])#, X_valid_header])
 
             #X_train, labels_train = load_svmlight_file(feat_train_path)
             #X_valid, labels_valid = load_svmlight_file(feat_valid_path)
@@ -185,6 +186,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
             #print X_valid.shape
             numTrain = X_train.shape[0]
             numValid = X_valid.shape[0]
+            print X_train.shape, X_valid.shape
             ##############
             ## Training ##
             ##############
@@ -353,19 +355,19 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                 #preds_bagging[:,n] = pred
                 #pred_raw = np.mean(preds_bagging[:,:(n+1)], axis=1)
                 #pred_class_bagging = proba2class(pred_raw)              
-                #logloss_valid = log_loss(Y_valid, pred_class_bagging)
+                #f1score_valid = log_loss(Y_valid, pred_class_bagging)
 
 
                 #print pred_proba.shape
-                #logloss_valid = log_loss(Y_valid, pred_proba, labels=range(pred_proba.shape[1]))
-                logloss_valid = f1_score(Y_valid, pred_label, labels=range(pred_proba.shape[1]),average='micro' )
+                #f1score_valid = log_loss(Y_valid, pred_proba, labels=range(pred_proba.shape[1]))
+                f1score_valid = f1_score(Y_valid, pred_label, labels=range(pred_proba.shape[1]),average='weighted' )
 
                 if (n+1) != bagging_size:
                     print("              {:>3}   {:>3}   {:>3}   {:>6}   {} x {}".format(
-                                run, fold, n+1, np.round(logloss_valid,6), X_train.shape[0], X_train.shape[1]))
+                                run, fold, n+1, np.round(f1score_valid,6), X_train.shape[0], X_train.shape[1]))
                 else:
                     print("                    {:>3}       {:>3}      {:>3}    {:>8}  {} x {}".format(
-                                run, fold, n+1, np.round(logloss_valid,6), X_train.shape[0], X_train.shape[1]))
+                                run, fold, n+1, np.round(f1score_valid,6), X_train.shape[0], X_train.shape[1]))
 
                 ### saving the training results on the training folds
                 ### no bagging here
@@ -379,7 +381,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                     with open(cross_validation_model_path, "wb") as f:
                         cPickle.dump(clf, f, -1)
         
-            logloss_cv[run-1,fold-1] = logloss_valid
+            f1score_cv[run-1,fold-1] = f1score_valid
             ## save this prediction
             #print raw_pred_valid_path
             #dfPred = pd.DataFrame({"target": Y_valid, "prediction": pred_raw})
@@ -390,11 +392,11 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
             #dfPred = pd.DataFrame({"target": Y_valid, "prediction": pred_class_bagging})
             #dfPred.to_csv(rank_pred_valid_path, index=False, header=True,
             #             columns=["target", "prediction"])
-    logloss_cv_mean = np.mean(logloss_cv)
-    logloss_cv_std = np.std(logloss_cv)
+    f1score_cv_mean = np.mean(f1score_cv)
+    f1score_cv_std = np.std(f1score_cv)
     if verbose_level >= 1:
-        print("              Mean: %.6f" % logloss_cv_mean)
-        print("              Std: %.6f" % logloss_cv_std)
+        print("              Mean: %.6f" % f1score_cv_mean)
+        print("              Std: %.6f" % f1score_cv_std)
 
     print ("----time elapsed----\n", str(timedelta(seconds=time.time() - start_time)))
 
@@ -417,7 +419,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
     if not os.path.exists(subm_path):
         os.makedirs(subm_path)
 
-    raw_pred_test_path = "%s/test.raw.pred.%s_[Id@%d].csv" % (save_path, feat_name, trial_counter)
+    raw_pred_test_path = "%s/test.raw.pred.%s_[Id@%d].csv1" % (save_path, feat_name, trial_counter)
     rank_pred_test_path = "%s/test.pred.%s_[Id@%d].csv" % (save_path, feat_name, trial_counter)
 
     # save trained model
@@ -429,31 +431,18 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
           X_train_tfidf = cPickle.load(f)
     with open("%s/train_bow_cosine_sim.feat.pkl" % (path), "rb") as f:
           X_train_bow = cPickle.load(f)
-    with open("%s/train_header.feat.pkl" % (path), "rb") as f:
-          X_train_header = cPickle.load(f)
 
     with open("%s/test_tfidf_cosine_sim.feat.pkl" % (path), "rb") as f:
           X_test_tfidf = cPickle.load(f)
     with open("%s/test_bow_cosine_sim.feat.pkl" % (path), "rb") as f:
           X_test_bow = cPickle.load(f)
-    with open("%s/test_header.feat.pkl" % (path), "rb") as f:
-          X_test_header = cPickle.load(f)
 
 
-    print X_train_header.shape
-    print X_test_header.shape
-    print X_train_tfidf.shape
-    print X_test_tfidf.shape
-    print X_train_bow.shape
-    print X_test_bow.shape
-
+    
     df_train = pd.read_csv('./data/train.csv')
     labels_train = df_train['cate_id'].values
 
     labels_test = [0]*X_test_bow.shape[0]
-    #X_train = np.hstack([X_train_tfidf, X_train_bow, X_train_header])
-    #X_test = np.hstack([X_test_tfidf, X_test_bow, X_test_header])
-
     X_train = np.hstack([X_train_tfidf, X_train_bow])
     X_test = np.hstack([X_test_tfidf, X_test_bow])
 
@@ -542,7 +531,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
     # save the retrained classifer result
     #no bagging used for retraining 
     ## write
-    # read data
+        # read data
     output = open('cate_label_map1.txt', 'rb')
     obj_dict = cPickle.load(output)
 
@@ -553,7 +542,7 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
     output.to_csv(raw_pred_test_path, index=False)   
      
     print ("----time elapsed----\n", str(timedelta(seconds=time.time() - start_time)))
-    return logloss_cv_mean, logloss_cv_std
+    return f1score_cv_mean, f1score_cv_std
 
 
 
@@ -606,10 +595,10 @@ if __name__ == "__main__":
         param_space = param_spaces[feat_name]
         #"""
         
-        log_file = "%s/%s_hyperopt.log" % (log_path, feat_name)
+        log_file = "%s/%s_hyperopt.log_new" % (log_path, feat_name)
         log_handler = open( log_file, 'wb' )
         writer = csv.writer( log_handler )
-        headers = [ 'trial_counter', 'logloss_mean', 'logloss_std' ]
+        headers = [ 'trial_counter', 'f1score_mean', 'f1score_std' ]
         for k,v in sorted(param_space.items()):
             headers.append(k)
         writer.writerow( headers )
@@ -630,9 +619,9 @@ if __name__ == "__main__":
         print("Best params")
         for k,v in best_params.items():
             print "        %s: %s" % (k,v)
-        trial_loglosss = -np.asarray(trials.losses(), dtype=float)
-        best_logloss_mean = max(trial_loglosss)
-        ind = np.where(trial_loglosss == best_logloss_mean)[0][0]
-        best_logloss_std = trials.trial_attachments(trials.trials[ind])['std']
-        print("Logloss stats")
-        print("        Mean: %.6f\n        Std: %.6f" % (best_logloss_mean, best_logloss_std))
+        trial_f1scores = -np.asarray(trials.losses(), dtype=float)
+        best_f1score_mean = max(trial_f1scores)
+        ind = np.where(trial_f1scores == best_f1score_mean)[0][0]
+        best_f1score_std = trials.trial_attachments(trials.trials[ind])['std']
+        print("F1 Score stats")
+        print("        Mean: %.6f\n        Std: %.6f" % (best_f1score_mean, best_f1score_std))
