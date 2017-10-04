@@ -122,6 +122,7 @@ param_space_reg_xgb_tree = {
     'seed': xgb_random_seed,
     "max_evals": hyperopt_param["xgb_max_evals"],
 }
+
 '''
 ## softmax with linear booster
 param_space_clf_xgb_linear = {
@@ -158,7 +159,6 @@ param_space_clf_xgb_linear = {
     'seed': xgb_random_seed,
     "max_evals": 230,
 }
-
 
 ## pairwise ranking with linear booster
 param_space_rank_xgb_linear = {
