@@ -3,11 +3,11 @@ import os
 import re
 import pandas as pd
 #from textacy import preprocess_text
-from sklearn.preprocessing import MultiLabelBinarizer
 #from sklearn.cross_validation import StratifiedKFold
 import cPickle
 import numpy as np
-
+from sklearn.preprocessing import MultiLabelBinarizer
+from collections import defaultdict
 
 
 
@@ -20,7 +20,7 @@ num_train = df_train.shape[0]
 num_test = df_test.shape[0]
 df = df_train.append(df_test, ignore_index=True)
 
-
+print num_train, num_test
 
 #df = pd.read_csv('./data/Interview_Mapping.csv')
 #df_test = df.loc[df['Area.of.Law'] =='To be Tested']
@@ -28,8 +28,6 @@ df = df_train.append(df_test, ignore_index=True)
 #indtrain = df.index[df['Area.of.Law'] =='To be Tested']
 #indtest= df.index[df['Area.of.Law'] !='To be Tested']
 #print num_train:
-
-
 
 
 
@@ -122,7 +120,7 @@ print 'header indicator categories:', source_dummies.shape
 
 source_dummies_test = source_dummies[num_train:]
 source_dummies_train = source_dummies[:num_train]
-
+print 'header indicator categories:'
 print source_dummies_test.shape
 print source_dummies_train.shape
 
@@ -138,19 +136,7 @@ for  name, group in df.groupby(['Area.of.Law']):
 
 
 
-
-'''
-df_test = df.loc[df['Area.of.Law'] =='To be Tested']
-
-df_train = df.loc[df['Area.of.Law'] !='To be Tested']
-
-Y_train = df_train['Area.of.Law']
-
-
-#df_train = df.loc[df['Area.of.Law'] !='To be Tested']
-'''
 # extract names
-from collections import defaultdict
 dd = defaultdict(list)
 names = []
 for i in range(df.shape[0]):
@@ -186,7 +172,7 @@ for i in range(df.shape[0]):
                 confirmed_last_name_list.append(last_name)
                
 
-    #print i, df.iloc[i,0], obj, confirmed_last_name_list 
+#print i, df.iloc[i,0], obj, confirmed_last_name_list 
 #print last_names
 #print len(set(last_names))
 
@@ -359,21 +345,22 @@ for run in range(n_runs):
         path = "%s/Run%d/Fold%d" % (feat_folder, run+1, fold+1)
         if not os.path.exists(path):
             os.makedirs(path)
+        '''
         cv_loc_train = loc_dummies_train[trainInd]
         cv_loc_valid = loc_dummies_train[validInd]
         cv_abb_names_train = abb_names_dummies_train[trainInd]
         cv_abb_names_valid = abb_names_dummies_train[validInd]
         cv_source_train = source_dummies_train[trainInd]
         cv_source_valid = source_dummies_train[validInd]
-
+        '''
         cv_train = X_train[trainInd]
         cv_valid = X_train[validInd]
 
-        print cv_loc_train.shape, cv_loc_valid.shape
-        print cv_abb_names_train.shape, cv_abb_names_valid.shape
-        print cv_source_train.shape, cv_source_valid.shape
+        #print cv_loc_train.shape, cv_loc_valid.shape
+        #print cv_abb_names_train.shape, cv_abb_names_valid.shape
+        #print cv_source_train.shape, cv_source_valid.shape
         print cv_train.shape, cv_valid.shape
-
+        '''
         with open("%s/train_court_loc.feat.pkl" % (path), "wb") as f:
             cPickle.dump(cv_loc_train, f, -1)
         with open("%s/valid_court_loc.feat.pkl" % (path), "wb") as f:
@@ -388,7 +375,7 @@ for run in range(n_runs):
             cPickle.dump(cv_source_train, f, -1)
         with open("%s/valid_source.feat.pkl" % (path), "wb") as f:
             cPickle.dump(cv_source_valid, f, -1)
-
+        '''
         with open("%s/train_header.feat.pkl" % (path), "wb") as f:
             cPickle.dump(cv_train, f, -1)
         with open("%s/valid_header.feat.pkl" % (path), "wb") as f:

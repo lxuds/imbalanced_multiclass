@@ -112,11 +112,8 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
 
     logloss_cv = np.zeros((n_runs, n_folds), dtype=float)
     
-#    for run in range(1,n_runs+1):
-#        for fold in range(1,n_folds+1):
-
-    for run in [1] :
-        for fold in [1]:
+    for run in range(1,n_runs+1):
+        for fold in range(1,n_folds+1):
             rng = np.random.RandomState(2015 + 1000 * run + 10 * fold)
 
             #### all the path
@@ -149,7 +146,8 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                   X_train_bow = cPickle.load(f)
             with open("%s/train_header.feat.pkl" % (path), "rb") as f:
                   X_train_header = cPickle.load(f)
-
+            with open("%s/train_tfidf_svd85_cosine_sim.feat.pkl"% (path), "rb") as f:
+                  X_train_tfidf_svd85_cosine_sim = cPickle.load(f)
 
              
             #print "%s/valid_tfidf_cosine_sim.feat.pkl" % (path)
@@ -159,6 +157,10 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
                   X_valid_bow = cPickle.load(f)
             with open("%s/valid_header.feat.pkl" % (path), "rb") as f:
                   X_valid_header = cPickle.load(f)
+
+            with open("%s/valid_tfidf_svd85_cosine_sim.feat.pkl"% (path), "rb") as f:
+                  X_valid_tfidf_svd85_cosine_sim = cPickle.load(f)
+
 
 
             with open("%s/train_label_scalar.pkl" % (path), "rb") as f:
@@ -171,8 +173,8 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
             
 
  
-            X_train = np.hstack([X_train_tfidf, X_train_bow, X_train_header])
-            X_valid = np.hstack([X_valid_tfidf, X_valid_bow, X_valid_header])
+            X_train = np.hstack([X_train_tfidf, X_train_bow])#, X_train_tfidf_svd85_cosine_sim])#, X_train_header])
+            X_valid = np.hstack([X_valid_tfidf, X_valid_bow])#, X_valid_tfidf_svd85_cosine_sim])#, X_valid_header])
 
             #X_train, labels_train = load_svmlight_file(feat_train_path)
             #X_valid, labels_valid = load_svmlight_file(feat_valid_path)
@@ -449,8 +451,11 @@ def hyperopt_obj(param, feat_folder, feat_name, trial_counter):
     labels_train = df_train['cate_id'].values
 
     labels_test = [0]*X_test_bow.shape[0]
-    X_train = np.hstack([X_train_tfidf, X_train_bow, X_train_header])
-    X_test = np.hstack([X_test_tfidf, X_test_bow, X_test_header])
+    #X_train = np.hstack([X_train_tfidf, X_train_bow, X_train_header])
+    #X_test = np.hstack([X_test_tfidf, X_test_bow, X_test_header])
+
+    X_train = np.hstack([X_train_tfidf, X_train_bow])
+    X_test = np.hstack([X_test_tfidf, X_test_bow])
 
     #Y_valid = labels_valid
     numTrain = X_train.shape[0]
